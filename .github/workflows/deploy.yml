@@ -1,0 +1,27 @@
+name: Deploy LWC to Dev Org & Trigger QA
+on:
+  push:
+    branches: [ main ]  # can be changed to another branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SFDX (authenticate from auth URL)
+        uses: sfdx-actions/setup-sfdx@v1
+        with:
+          sfdx-auth-url: ${{ secrets.SFDX_AUTH_URL }}
+
+      - name: Deploy LWC to Dev org
+        run: |
+          sfdx force:source:deploy -u muneeba@gmaildevorg.com -p force-app/main/default/lwc --wait 10 --json
+
+      - name: Trigger QA Repo Tests (repository_dispatch)
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.QA_PAT }}
+          repository: muneebamanzoor/QA-Repo
+          event-type: run-tests
+          client-payload: '{"ref":"${{ github.ref }}","sha":"${{ github.sha }}"}'
